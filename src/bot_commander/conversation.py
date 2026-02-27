@@ -34,7 +34,7 @@ class ConversationState:
 
 def is_skip(text: str) -> bool:
     """Return True if the user wants to skip a field."""
-    return text.lower() in ("skip", "none", "")
+    return text.lower() in ("skip", "s", "none", "")
 
 
 def is_valid_time(text: str) -> bool:
