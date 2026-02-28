@@ -52,8 +52,8 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "telegram-bot", marker = "extra == 'telegram'", editable = "../telegram-bot" },
-    { name = "xmpp-bot", marker = "extra == 'xmpp'", editable = "../xmpp-bot" },
+    { name = "telegram-bot", marker = "extra == 'telegram'", git = "https://github.com/BenjaminKobjolke/telegram-bot.git" },
+    { name = "xmpp-bot", marker = "extra == 'xmpp'", git = "https://github.com/BenjaminKobjolke/xmpp-bot.git" },
 ]
 provides-extras = ["telegram", "xmpp"]
 
@@ -429,22 +429,11 @@ wheels = [
 [[package]]
 name = "telegram-bot"
 version = "0.1.0"
-source = { editable = "../telegram-bot" }
+source = { git = "https://github.com/BenjaminKobjolke/telegram-bot.git#0ee3ef7c8b6b32b3fd7a2564d4bd673e505137a1" }
 dependencies = [
     { name = "python-dotenv" },
     { name = "python-telegram-bot" },
 ]
-
-[package.metadata]
-requires-dist = [
-    { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.10.0" },
-    { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0.0" },
-    { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=0.23.0" },
-    { name = "python-dotenv", specifier = ">=1.0.0" },
-    { name = "python-telegram-bot", specifier = ">=21.0" },
-    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.4.0" },
-]
-provides-extras = ["dev"]
 
 [[package]]
 name = "typing-extensions"
@@ -458,19 +447,8 @@ wheels = [
 [[package]]
 name = "xmpp-bot"
 version = "0.1.0"
-source = { editable = "../xmpp-bot" }
+source = { git = "https://github.com/BenjaminKobjolke/xmpp-bot.git#37a47a057513cb8029c3e0ab836c50f8ddb95a87" }
 dependencies = [
     { name = "python-dotenv" },
     { name = "slixmpp" },
 ]
-
-[package.metadata]
-requires-dist = [
-    { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.10.0" },
-    { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0.0" },
-    { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=0.23.0" },
-    { name = "python-dotenv", specifier = ">=1.0.0" },
-    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.4.0" },
-    { name = "slixmpp", specifier = ">=1.8.0" },
-]
-provides-extras = ["dev"]

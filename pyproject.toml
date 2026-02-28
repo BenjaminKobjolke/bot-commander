@@ -18,8 +18,8 @@ build-backend = "hatchling.build"
 packages = ["src/bot_commander"]
 
 [tool.uv.sources]
-telegram-bot = { path = "../telegram-bot", editable = true }
-xmpp-bot = { path = "../xmpp-bot", editable = true }
+telegram-bot = { git = "https://github.com/BenjaminKobjolke/telegram-bot.git" }
+xmpp-bot = { git = "https://github.com/BenjaminKobjolke/xmpp-bot.git" }
 
 [dependency-groups]
 dev = [
