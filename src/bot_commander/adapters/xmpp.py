@@ -93,10 +93,8 @@ class XmppAdapter(BotAdapter):
         """Shutdown the XMPP bot connection."""
         if XMPP_AVAILABLE:
             try:
+                XmppBot.get_instance().disconnect()
                 if self._loop:
-                    asyncio.run_coroutine_threadsafe(
-                        XmppBot.get_instance().disconnect(), self._loop
-                    )
                     self._loop.call_soon_threadsafe(self._loop.stop)
             except Exception as e:
                 logger.error("Error shutting down XMPP bot: %s", e, exc_info=True)

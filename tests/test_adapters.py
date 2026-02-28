@@ -544,7 +544,7 @@ class TestXmppAdapter:
     def test_shutdown_calls_bot_disconnect(self) -> None:
         """shutdown() should disconnect XMPP bot and stop event loop."""
         mock_bot_instance = MagicMock()
-        mock_bot_instance.disconnect = AsyncMock()
+        mock_bot_instance.disconnect = MagicMock()
         mock_bot_cls = MagicMock()
         mock_bot_cls.get_instance.return_value = mock_bot_instance
 
