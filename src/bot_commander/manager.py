@@ -67,6 +67,11 @@ class BotManager:
         except Exception:
             logger.error("Error processing bot message", exc_info=True)
 
+    def send_message(self, user_id: str, text: str) -> None:
+        """Send a message to a user outside the request/response cycle."""
+        if self._adapter:
+            self._adapter.reply(user_id, text)
+
     def shutdown(self) -> None:
         """Shutdown the bot adapter."""
         if self._adapter:

@@ -143,6 +143,36 @@ class TestBotManagerOnMessage:
             mock_adapter.reply.assert_not_called()
 
 
+class TestBotManagerSendMessage:
+    """Tests for BotManager.send_message()."""
+
+    def test_send_message_calls_adapter_reply(self) -> None:
+        handler = MagicMock(spec=MessageHandler)
+        config = MagicMock(spec=BotConfigProvider)
+        from bot_commander.manager import BotManager
+
+        with patch("bot_commander.manager.TelegramAdapter", spec=BotAdapter) as mock_telegram_cls:
+            mock_adapter = MagicMock(spec=BotAdapter)
+            mock_telegram_cls.return_value = mock_adapter
+
+            manager = BotManager(
+                message_handler=handler, config_provider=config, bot_type="telegram"
+            )
+            manager.start()
+            manager.send_message("user1", "Hello from outside")
+
+            mock_adapter.reply.assert_called_once_with("user1", "Hello from outside")
+
+    def test_send_message_no_adapter_does_nothing(self) -> None:
+        handler = MagicMock(spec=MessageHandler)
+        config = MagicMock(spec=BotConfigProvider)
+        from bot_commander.manager import BotManager
+
+        manager = BotManager(message_handler=handler, config_provider=config, bot_type="none")
+        # Should not raise any exception
+        manager.send_message("user1", "Hello")
+
+
 class TestBotManagerShutdown:
     """Tests for BotManager.shutdown()."""
 
