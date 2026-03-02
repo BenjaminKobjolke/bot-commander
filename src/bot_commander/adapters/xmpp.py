@@ -49,8 +49,11 @@ class XmppAdapter(BotAdapter):
     def _run_loop(self) -> None:
         """Run the asyncio event loop in a daemon thread."""
         asyncio.set_event_loop(self._loop)
-        if self._loop:
-            self._loop.run_forever()
+        try:
+            if self._loop:
+                self._loop.run_forever()
+        except Exception:
+            logger.error("XMPP event loop crashed", exc_info=True)
 
     async def _async_init(self, config: BotConfigProvider) -> None:
         """Perform async initialization of the XMPP bot."""

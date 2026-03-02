@@ -337,6 +337,27 @@ class TestXmppAdapter:
             with pytest.raises(ImportError, match="xmpp-bot package is not installed"):
                 adapter.initialize(mock_config)
 
+    def test_run_loop_logs_error_on_crash(self) -> None:
+        """_run_loop() should log error with traceback when event loop crashes."""
+        with patch("bot_commander.adapters.xmpp.XMPP_AVAILABLE", True):
+            from bot_commander.adapters.xmpp import XmppAdapter
+
+            adapter = XmppAdapter()
+            mock_loop = MagicMock(spec=asyncio.AbstractEventLoop)
+            mock_loop.run_forever.side_effect = RuntimeError("loop exploded")
+            adapter._loop = mock_loop
+
+            with (
+                patch("bot_commander.adapters.xmpp.logger") as mock_logger,
+                patch("asyncio.set_event_loop"),
+            ):
+                adapter._run_loop()
+
+                mock_logger.error.assert_called_once()
+                args, kwargs = mock_logger.error.call_args
+                assert "XMPP event loop crashed" in args[0]
+                assert kwargs.get("exc_info") is True
+
     def test_initialize_calls_bot_methods(self) -> None:
         """initialize() should start event loop, configure, and start XMPP bot."""
         mock_bot_instance = MagicMock()
