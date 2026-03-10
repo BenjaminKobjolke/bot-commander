@@ -3,6 +3,7 @@
 import asyncio
 from abc import ABC
 from unittest.mock import AsyncMock, MagicMock, patch
+from xml.etree.ElementTree import Element, SubElement
 
 import pytest
 
@@ -669,3 +670,150 @@ class TestCallbackIntegration:
             assert len(received_messages) == 1
             assert received_messages[0].user_id == "sender@example.com"
             assert received_messages[0].text == "xmpp msg"
+
+    def test_xmpp_callback_includes_attachments(self) -> None:
+        """XmppAdapter should extract OOB attachments from stanza."""
+        with patch("bot_commander.adapters.xmpp.XMPP_AVAILABLE", True):
+            from bot_commander.adapters.xmpp import XmppAdapter
+
+            adapter = XmppAdapter()
+            received_messages: list[BotMessage] = []
+            adapter.set_on_message(lambda msg: received_messages.append(msg))
+
+            stanza = MagicMock()
+            xml = Element("message")
+            x_elem = SubElement(xml, "{jabber:x:oob}x")
+            url_elem = SubElement(x_elem, "{jabber:x:oob}url")
+            url_elem.text = "https://upload.example.com/files/voice.ogg"
+            stanza.xml = xml
+
+            loop = asyncio.new_event_loop()
+            try:
+                loop.run_until_complete(
+                    adapter._handle_message("sender@example.com/res", "check this", stanza)
+                )
+            finally:
+                loop.close()
+
+            assert len(received_messages) == 1
+            msg = received_messages[0]
+            assert len(msg.attachments) == 1
+            assert msg.attachments[0].filename == "voice.ogg"
+            assert msg.attachments[0].mime_type == "audio/ogg"
+
+
+class TestExtractAttachments:
+    """Tests for _extract_attachments helper."""
+
+    def test_no_xml_attribute(self) -> None:
+        """Stanza without .xml returns empty tuple."""
+        from bot_commander.adapters.xmpp import _extract_attachments
+
+        stanza = object()
+        assert _extract_attachments(stanza) == ()
+
+    def test_xml_none(self) -> None:
+        """Stanza with .xml = None returns empty tuple."""
+        from bot_commander.adapters.xmpp import _extract_attachments
+
+        stanza = MagicMock()
+        stanza.xml = None
+        assert _extract_attachments(stanza) == ()
+
+    def test_no_oob_element(self) -> None:
+        """Stanza XML without OOB element returns empty tuple."""
+        from bot_commander.adapters.xmpp import _extract_attachments
+
+        stanza = MagicMock()
+        stanza.xml = Element("message")
+        assert _extract_attachments(stanza) == ()
+
+    def test_oob_with_url(self) -> None:
+        """Extracts attachment from OOB element."""
+        from bot_commander.adapters.xmpp import _extract_attachments
+
+        xml = Element("message")
+        x = SubElement(xml, "{jabber:x:oob}x")
+        url = SubElement(x, "{jabber:x:oob}url")
+        url.text = "https://upload.example.com/files/photo.jpg"
+
+        stanza = MagicMock()
+        stanza.xml = xml
+
+        result = _extract_attachments(stanza)
+        assert len(result) == 1
+        assert result[0].url == "https://upload.example.com/files/photo.jpg"
+        assert result[0].filename == "photo.jpg"
+        assert result[0].mime_type == "image/jpeg"
+
+    def test_oob_multiple_attachments(self) -> None:
+        """Extracts multiple OOB elements."""
+        from bot_commander.adapters.xmpp import _extract_attachments
+
+        xml = Element("message")
+        for fname in ("a.png", "b.pdf"):
+            x = SubElement(xml, "{jabber:x:oob}x")
+            u = SubElement(x, "{jabber:x:oob}url")
+            u.text = f"https://example.com/{fname}"
+
+        stanza = MagicMock()
+        stanza.xml = xml
+
+        result = _extract_attachments(stanza)
+        assert len(result) == 2
+        assert result[0].filename == "a.png"
+        assert result[1].filename == "b.pdf"
+
+    def test_oob_empty_url(self) -> None:
+        """OOB element with empty URL is skipped."""
+        from bot_commander.adapters.xmpp import _extract_attachments
+
+        xml = Element("message")
+        x = SubElement(xml, "{jabber:x:oob}x")
+        u = SubElement(x, "{jabber:x:oob}url")
+        u.text = "   "
+
+        stanza = MagicMock()
+        stanza.xml = xml
+        assert _extract_attachments(stanza) == ()
+
+    def test_oob_missing_url_element(self) -> None:
+        """OOB element without <url> child is skipped."""
+        from bot_commander.adapters.xmpp import _extract_attachments
+
+        xml = Element("message")
+        SubElement(xml, "{jabber:x:oob}x")  # no <url> child
+
+        stanza = MagicMock()
+        stanza.xml = xml
+        assert _extract_attachments(stanza) == ()
+
+    def test_url_encoded_filename(self) -> None:
+        """URL-encoded filenames are decoded."""
+        from bot_commander.adapters.xmpp import _extract_attachments
+
+        xml = Element("message")
+        x = SubElement(xml, "{jabber:x:oob}x")
+        u = SubElement(x, "{jabber:x:oob}url")
+        u.text = "https://example.com/my%20photo.jpg"
+
+        stanza = MagicMock()
+        stanza.xml = xml
+
+        result = _extract_attachments(stanza)
+        assert result[0].filename == "my photo.jpg"
+
+    def test_unknown_extension_empty_mime(self) -> None:
+        """Unknown file extension results in empty mime_type."""
+        from bot_commander.adapters.xmpp import _extract_attachments
+
+        xml = Element("message")
+        x = SubElement(xml, "{jabber:x:oob}x")
+        u = SubElement(x, "{jabber:x:oob}url")
+        u.text = "https://example.com/file.xyzabc"
+
+        stanza = MagicMock()
+        stanza.xml = xml
+
+        result = _extract_attachments(stanza)
+        assert result[0].mime_type == ""

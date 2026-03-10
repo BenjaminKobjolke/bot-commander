@@ -2,7 +2,7 @@
 
 import pytest
 
-from bot_commander.types import BotMessage, BotResponse
+from bot_commander.types import Attachment, BotMessage, BotResponse
 
 
 class TestBotMessage:
@@ -38,6 +38,52 @@ class TestBotMessage:
         msg = BotMessage(user_id="", text="")
         assert msg.user_id == ""
         assert msg.text == ""
+
+    def test_bot_message_default_no_attachments(self) -> None:
+        msg = BotMessage(user_id="u1", text="hi")
+        assert msg.attachments == ()
+
+    def test_bot_message_with_attachments(self) -> None:
+        att = Attachment(
+            url="https://example.com/file.ogg", filename="file.ogg", mime_type="audio/ogg"
+        )
+        msg = BotMessage(user_id="u1", text="hi", attachments=(att,))
+        assert len(msg.attachments) == 1
+        assert msg.attachments[0].url == "https://example.com/file.ogg"
+
+    def test_bot_message_backwards_compatible(self) -> None:
+        """Existing BotMessage(user_id=..., text=...) calls still work."""
+        msg = BotMessage(user_id="u1", text="hi")
+        assert msg.attachments == ()
+
+
+class TestAttachment:
+    """Tests for the Attachment dataclass."""
+
+    def test_create_attachment(self) -> None:
+        att = Attachment(
+            url="https://example.com/voice.ogg", filename="voice.ogg", mime_type="audio/ogg"
+        )
+        assert att.url == "https://example.com/voice.ogg"
+        assert att.filename == "voice.ogg"
+        assert att.mime_type == "audio/ogg"
+
+    def test_attachment_defaults(self) -> None:
+        att = Attachment(url="https://example.com/file")
+        assert att.filename == ""
+        assert att.mime_type == ""
+
+    def test_attachment_is_frozen(self) -> None:
+        att = Attachment(url="https://example.com/file")
+        with pytest.raises(AttributeError):
+            att.url = "other"  # type: ignore[misc]
+
+    def test_attachment_equality(self) -> None:
+        a1 = Attachment(url="https://example.com/a", filename="a")
+        a2 = Attachment(url="https://example.com/a", filename="a")
+        a3 = Attachment(url="https://example.com/b", filename="b")
+        assert a1 == a2
+        assert a1 != a3
 
 
 class TestBotResponse:

@@ -2,7 +2,11 @@
 
 import asyncio
 import logging
+import mimetypes
 import threading
+from posixpath import basename as url_basename
+from urllib.parse import unquote, urlparse
+from xml.etree.ElementTree import Element
 
 from bot_commander.config.constants import (
     KEY_ALLOWED_JIDS,
@@ -10,7 +14,7 @@ from bot_commander.config.constants import (
     KEY_JID,
     KEY_PASSWORD,
 )
-from bot_commander.types import BotMessage
+from bot_commander.types import Attachment, BotMessage
 
 from .base import BotAdapter, BotConfigProvider
 
@@ -80,7 +84,8 @@ class XmppAdapter(BotAdapter):
     async def _handle_message(self, sender: str, message: str, stanza: object) -> None:
         """Convert an XMPP message into a BotMessage and forward it."""
         bare_jid = sender.split("/")[0]
-        msg = BotMessage(user_id=bare_jid, text=message)
+        attachments = _extract_attachments(stanza)
+        msg = BotMessage(user_id=bare_jid, text=message, attachments=attachments)
         if self._on_message:
             self._on_message(msg)
 
@@ -101,3 +106,39 @@ class XmppAdapter(BotAdapter):
                     self._loop.call_soon_threadsafe(self._loop.stop)
             except Exception as e:
                 logger.error("Error shutting down XMPP bot: %s", e, exc_info=True)
+
+
+_OOB_NS = "jabber:x:oob"
+
+
+def _extract_attachments(stanza: object) -> tuple[Attachment, ...]:
+    """Extract file attachments from an XMPP stanza via OOB (XEP-0066).
+
+    Parses the raw XML for ``<x xmlns="jabber:x:oob"><url>`` elements.
+    Falls back gracefully when the stanza has no XML or no OOB data.
+    """
+    xml: Element | None = getattr(stanza, "xml", None)
+    if xml is None:
+        return ()
+
+    attachments: list[Attachment] = []
+    for x_elem in xml.findall(f"{{{_OOB_NS}}}x"):
+        url_elem = x_elem.find(f"{{{_OOB_NS}}}url")
+        if url_elem is None or not url_elem.text:
+            continue
+        url = url_elem.text.strip()
+        if not url:
+            continue
+
+        # Derive filename from URL path
+        parsed = urlparse(url)
+        filename = unquote(url_basename(parsed.path)) if parsed.path else ""
+
+        # Guess MIME type from filename
+        mime_type, _ = mimetypes.guess_type(filename) if filename else ("", None)
+
+        attachments.append(
+            Attachment(url=url, filename=filename, mime_type=mime_type or "")
+        )
+
+    return tuple(attachments)
