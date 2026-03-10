@@ -120,7 +120,7 @@ class TestBotManagerOnMessage:
             handler.handle.assert_called_once_with(message)
             mock_adapter.reply.assert_not_called()
 
-    def test_on_message_handles_exceptions(self, caplog: pytest.LogCaptureFixture) -> None:
+    def test_on_message_logs_and_reraises_exceptions(self, caplog: pytest.LogCaptureFixture) -> None:
         handler = MagicMock(spec=MessageHandler)
         handler.handle.side_effect = RuntimeError("boom")
         config = MagicMock(spec=BotConfigProvider)
@@ -137,7 +137,8 @@ class TestBotManagerOnMessage:
 
             message = BotMessage(user_id="user1", text="hello")
             with caplog.at_level(logging.ERROR):
-                manager._on_message(message)
+                with pytest.raises(RuntimeError, match="boom"):
+                    manager._on_message(message)
 
             assert "boom" in caplog.text
             mock_adapter.reply.assert_not_called()

@@ -59,13 +59,18 @@ class BotManager:
         return True
 
     def _on_message(self, message: BotMessage) -> None:
-        """Handle an incoming bot message."""
+        """Handle an incoming bot message.
+
+        Exceptions are logged but re-raised so callers can handle them
+        (e.g. send an error message back to the user).
+        """
         try:
             response = self._message_handler.handle(message)
             if response.text and self._adapter:
                 self._adapter.reply(message.user_id, response.text)
         except Exception:
             logger.error("Error processing bot message", exc_info=True)
+            raise
 
     def send_message(self, user_id: str, text: str) -> None:
         """Send a message to a user outside the request/response cycle."""
