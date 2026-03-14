@@ -3,6 +3,7 @@
 import asyncio
 import logging
 import mimetypes
+import os
 import threading
 from posixpath import basename as url_basename
 from urllib.parse import unquote, urlparse
@@ -97,6 +98,17 @@ class XmppAdapter(BotAdapter):
                 self._loop,
             )
 
+    def send_audio_file(self, user_id: str, audio_path: str) -> None:
+        """Send an audio file to an XMPP user via HTTP File Upload."""
+        if XMPP_AVAILABLE and self._loop:
+            future = asyncio.run_coroutine_threadsafe(
+                XmppBot.get_instance().send_audio_file(audio_path, user_id),
+                self._loop,
+            )
+            future.add_done_callback(
+                lambda f: _on_audio_sent(f, audio_path, user_id)
+            )
+
     def shutdown(self) -> None:
         """Shutdown the XMPP bot connection."""
         if XMPP_AVAILABLE:
@@ -142,3 +154,18 @@ def _extract_attachments(stanza: object) -> tuple[Attachment, ...]:
         )
 
     return tuple(attachments)
+
+
+def _on_audio_sent(
+    future: asyncio.Future,  # type: ignore[type-arg]
+    audio_path: str,
+    user_id: str,
+) -> None:
+    """Callback after audio upload completes — log errors and clean up."""
+    exc = future.exception()
+    if exc:
+        logger.error("Failed to send audio file to %s: %s", user_id, exc)
+    try:
+        os.unlink(audio_path)
+    except OSError:
+        logger.warning("Failed to delete temp audio file: %s", audio_path)

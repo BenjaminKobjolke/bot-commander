@@ -33,6 +33,9 @@ class BotAdapter(ABC):
     def reply(self, user_id: str, text: str) -> None:
         """Send a reply to a user."""
 
+    def send_audio_file(self, user_id: str, audio_path: str) -> None:
+        """Send an audio file to a user. Subclasses may override."""
+
     @abstractmethod
     def shutdown(self) -> None:
         """Shutdown the bot connection."""

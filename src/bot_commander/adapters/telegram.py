@@ -1,6 +1,7 @@
 """Telegram bot adapter."""
 
 import logging
+import os
 
 from bot_commander.config.constants import (
     KEY_ALLOWED_USER_IDS,
@@ -72,6 +73,17 @@ class TelegramAdapter(BotAdapter):
         """Send a reply to a Telegram user."""
         if TELEGRAM_AVAILABLE:
             TelegramBot.get_instance().reply_to_user(text, int(user_id))
+
+    def send_audio_file(self, user_id: str, audio_path: str) -> None:
+        """Send an audio file to a Telegram user as a voice message."""
+        if TELEGRAM_AVAILABLE:
+            try:
+                TelegramBot.get_instance().send_voice_to_user(audio_path, int(user_id))
+            finally:
+                try:
+                    os.unlink(audio_path)
+                except OSError:
+                    logger.warning("Failed to delete temp audio file: %s", audio_path)
 
     def shutdown(self) -> None:
         """Shutdown the Telegram bot connection."""

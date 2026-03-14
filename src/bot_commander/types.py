@@ -29,3 +29,4 @@ class BotResponse:
     """Response to send back to a user."""
 
     text: str
+    audio_path: str = ""

@@ -66,8 +66,11 @@ class BotManager:
         """
         try:
             response = self._message_handler.handle(message)
-            if response.text and self._adapter:
-                self._adapter.reply(message.user_id, response.text)
+            if self._adapter:
+                if response.text:
+                    self._adapter.reply(message.user_id, response.text)
+                if response.audio_path:
+                    self._adapter.send_audio_file(message.user_id, response.audio_path)
         except Exception:
             logger.error("Error processing bot message", exc_info=True)
             raise
