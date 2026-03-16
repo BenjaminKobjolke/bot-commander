@@ -30,3 +30,4 @@ class BotResponse:
 
     text: str
     audio_path: str = ""
+    extra_texts: tuple[str, ...] = ()
