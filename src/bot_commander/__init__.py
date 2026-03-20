@@ -1,6 +1,7 @@
 """Bot-commander: reusable bot command framework."""
 
 from .adapters.base import BotAdapter, BotConfigProvider
+from .buffered_notifier import BufferedNotifier
 from .commander import Commander, CommandHandler, ConversationHandler, MessageHandler
 from .config.constants import CONFIRMED_SENTINEL
 from .conversation import (
@@ -27,6 +28,8 @@ __all__ = [
     # Adapters
     "BotAdapter",
     "BotConfigProvider",
+    # Buffered notifier
+    "BufferedNotifier",
     # Commander
     "Commander",
     "CommandHandler",
