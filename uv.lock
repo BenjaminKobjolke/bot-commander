@@ -913,7 +913,7 @@ wheels = [
 [[package]]
 name = "xmpp-bot"
 version = "0.1.0"
-source = { git = "https://github.com/BenjaminKobjolke/xmpp-bot.git#86f416b079a554713442eeed6760c008c7c7c360" }
+source = { git = "https://github.com/BenjaminKobjolke/xmpp-bot.git#c3e3c6b0560d63b90482da91f3394615c8637c08" }
 dependencies = [
     { name = "python-dotenv" },
     { name = "slixmpp", extra = ["xep-0363"] },
