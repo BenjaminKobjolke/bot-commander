@@ -105,19 +105,31 @@ class XmppAdapter(BotAdapter):
                 XmppBot.get_instance().send_audio_file(audio_path, user_id),
                 self._loop,
             )
-            future.add_done_callback(
-                lambda f: _on_audio_sent(f, audio_path, user_id)
-            )
+            future.add_done_callback(lambda f: _on_audio_sent(f, audio_path, user_id))
+
+    async def _async_shutdown(self) -> None:
+        """Perform shutdown on the event loop thread."""
+        bot = XmppBot.get_instance()
+        await bot.flush(timeout=5.0)
+        bot.disconnect()
 
     def shutdown(self) -> None:
         """Shutdown the XMPP bot connection."""
-        if XMPP_AVAILABLE:
-            try:
-                XmppBot.get_instance().disconnect()
-                if self._loop:
-                    self._loop.call_soon_threadsafe(self._loop.stop)
-            except Exception as e:
-                logger.error("Error shutting down XMPP bot: %s", e, exc_info=True)
+        if not XMPP_AVAILABLE:
+            return
+        try:
+            if self._loop and self._loop.is_running():
+                # Schedule disconnect on the bot's own event loop to avoid
+                # cross-thread races with the reconnect loop.
+                future = asyncio.run_coroutine_threadsafe(self._async_shutdown(), self._loop)
+                try:
+                    future.result(timeout=10)
+                except Exception:
+                    logger.warning("Async shutdown timed out, forcing loop stop")
+            if self._loop:
+                self._loop.call_soon_threadsafe(self._loop.stop)
+        except Exception as e:
+            logger.error("Error shutting down XMPP bot: %s", e, exc_info=True)
 
 
 _OOB_NS = "jabber:x:oob"
@@ -149,9 +161,7 @@ def _extract_attachments(stanza: object) -> tuple[Attachment, ...]:
         # Guess MIME type from filename
         mime_type, _ = mimetypes.guess_type(filename) if filename else ("", None)
 
-        attachments.append(
-            Attachment(url=url, filename=filename, mime_type=mime_type or "")
-        )
+        attachments.append(Attachment(url=url, filename=filename, mime_type=mime_type or ""))
 
     return tuple(attachments)
 

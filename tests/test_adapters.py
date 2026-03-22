@@ -563,9 +563,73 @@ class TestXmppAdapter:
             # Should not raise
             adapter.reply("user@example.com", "Hello!")
 
-    def test_shutdown_calls_bot_disconnect(self) -> None:
-        """shutdown() should disconnect XMPP bot and stop event loop."""
+    def test_shutdown_schedules_on_event_loop(self) -> None:
+        """shutdown() should use run_coroutine_threadsafe to disconnect on the event loop thread."""
         mock_bot_instance = MagicMock()
+        mock_bot_instance.disconnect = MagicMock()
+        mock_bot_instance.flush = AsyncMock()
+        mock_bot_cls = MagicMock()
+        mock_bot_cls.get_instance.return_value = mock_bot_instance
+
+        with (
+            patch("bot_commander.adapters.xmpp.XMPP_AVAILABLE", True),
+            patch(
+                "bot_commander.adapters.xmpp.XmppBot",
+                mock_bot_cls,
+                create=True,
+            ),
+            patch("bot_commander.adapters.xmpp.asyncio") as mock_asyncio,
+        ):
+            from bot_commander.adapters.xmpp import XmppAdapter
+
+            adapter = XmppAdapter()
+            mock_loop = MagicMock(spec=asyncio.AbstractEventLoop)
+            mock_loop.is_running.return_value = True
+            mock_future = MagicMock()
+            mock_asyncio.run_coroutine_threadsafe.return_value = mock_future
+            adapter._loop = mock_loop
+
+            adapter.shutdown()
+
+            # Should schedule async shutdown on the event loop
+            mock_asyncio.run_coroutine_threadsafe.assert_called_once()
+            mock_future.result.assert_called_once_with(timeout=10)
+            # Should stop the loop after disconnect
+            mock_loop.call_soon_threadsafe.assert_called_once_with(mock_loop.stop)
+
+    def test_shutdown_handles_timeout_gracefully(self) -> None:
+        """shutdown() should still stop loop if async shutdown times out."""
+        mock_bot_cls = MagicMock()
+
+        with (
+            patch("bot_commander.adapters.xmpp.XMPP_AVAILABLE", True),
+            patch(
+                "bot_commander.adapters.xmpp.XmppBot",
+                mock_bot_cls,
+                create=True,
+            ),
+            patch("bot_commander.adapters.xmpp.asyncio") as mock_asyncio,
+        ):
+            from bot_commander.adapters.xmpp import XmppAdapter
+
+            adapter = XmppAdapter()
+            mock_loop = MagicMock(spec=asyncio.AbstractEventLoop)
+            mock_loop.is_running.return_value = True
+            mock_future = MagicMock()
+            mock_future.result.side_effect = TimeoutError("hung")
+            mock_asyncio.run_coroutine_threadsafe.return_value = mock_future
+            adapter._loop = mock_loop
+
+            # Should not raise
+            adapter.shutdown()
+
+            # Loop should still be stopped despite timeout
+            mock_loop.call_soon_threadsafe.assert_called_once_with(mock_loop.stop)
+
+    def test_async_shutdown_calls_flush_then_disconnect(self) -> None:
+        """_async_shutdown must call flush before disconnect."""
+        mock_bot_instance = MagicMock()
+        mock_bot_instance.flush = AsyncMock()
         mock_bot_instance.disconnect = MagicMock()
         mock_bot_cls = MagicMock()
         mock_bot_cls.get_instance.return_value = mock_bot_instance
@@ -581,12 +645,15 @@ class TestXmppAdapter:
             from bot_commander.adapters.xmpp import XmppAdapter
 
             adapter = XmppAdapter()
-            adapter._loop = asyncio.new_event_loop()
 
-            adapter.shutdown()
+            loop = asyncio.new_event_loop()
+            try:
+                loop.run_until_complete(adapter._async_shutdown())
+            finally:
+                loop.close()
 
-            # The loop should have been stopped
-            assert adapter._loop.is_closed() or not adapter._loop.is_running()
+            mock_bot_instance.flush.assert_awaited_once_with(timeout=5.0)
+            mock_bot_instance.disconnect.assert_called_once()
 
     def test_shutdown_handles_exception(self) -> None:
         """shutdown() should catch exceptions and log them."""
