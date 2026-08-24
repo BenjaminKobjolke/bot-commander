@@ -14,3 +14,6 @@ venv/
 .ruff_cache/
 *.so
 *.dylib
+.claude/
+/PLAN_*.md
+tmp/commit_msg.tmp
