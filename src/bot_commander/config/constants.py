@@ -25,6 +25,27 @@ KEY_DEFAULT_RECEIVER = "default_receiver"
 KEY_ALLOWED_JIDS = "allowed_jids"
 
 # ---------------------------------------------------------------------------
+# CLI env-file names (same names as fints-postbank's .env files)
+# ---------------------------------------------------------------------------
+
+ENV_BOT_MODE = "BOT_MODE"
+ENV_SETTING_NAMES = {
+    KEY_BOT_TOKEN: "TELEGRAM_BOT_TOKEN",
+    KEY_CHANNEL_ID: "TELEGRAM_CHANNEL_ID",
+    KEY_ALLOWED_USER_IDS: "TELEGRAM_ALLOWED_USER_IDS",
+    KEY_JID: "XMPP_JID",
+    KEY_PASSWORD: "XMPP_PASSWORD",
+    KEY_DEFAULT_RECEIVER: "XMPP_DEFAULT_RECEIVER",
+    KEY_ALLOWED_JIDS: "XMPP_ALLOWED_JIDS",
+}
+# telegram-bot requires a channel id even when only direct messages are sent.
+DEFAULT_CHANNEL_ID = "@dummy_channel"
+REQUIRED_SETTINGS = {
+    "telegram": (KEY_BOT_TOKEN,),
+    "xmpp": (KEY_JID, KEY_PASSWORD),
+}
+
+# ---------------------------------------------------------------------------
 # Conversation defaults
 # ---------------------------------------------------------------------------
 

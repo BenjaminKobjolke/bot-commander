@@ -6,6 +6,9 @@ readme = "README.md"
 requires-python = ">=3.11"
 dependencies = []
 
+[project.scripts]
+bot-commander = "bot_commander.cli:main"
+
 [project.optional-dependencies]
 telegram = ["telegram-bot"]
 xmpp = ["xmpp-bot", "aiodns<4.0.0"]
